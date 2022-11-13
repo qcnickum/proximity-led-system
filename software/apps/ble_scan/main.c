@@ -34,6 +34,9 @@ void ble_evt_adv_report(ble_evt_t const* p_ble_evt) {
   uint16_t adv_len = adv_report->data.len; // length of advertisement payload data
 
   printf("Received an advertisement!\n");
+  if (ble_addr[1] == 0xAA && ble_addr[0] == 0xBB) {
+    printf("Found our device with address 0x%X%X\n", ble_addr[1], ble_addr[0]);
+  }
 }
 
 
