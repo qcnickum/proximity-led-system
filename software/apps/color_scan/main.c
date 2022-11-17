@@ -36,6 +36,11 @@ void ble_evt_adv_report(ble_evt_t const* p_ble_evt) {
   printf("Received an advertisement!\n");
   if (ble_addr[1] == 0xAA && ble_addr[0] == 0xBB) {
     printf("Found our device with address 0x%X%X\n", ble_addr[1], ble_addr[0]);
+    printf("It has data: ");
+    for (uint16_t i=0; i < adv_len; i++) {
+      printf("0x%x  ", adv_buf[i]);
+    }
+    printf("\n\n\n\n");
   }
 }
 

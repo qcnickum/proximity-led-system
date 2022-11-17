@@ -27,22 +27,24 @@ static simple_ble_config_t ble_config = {
 // Main application state
 simple_ble_app_t* simple_ble_app;
 
+// defaults to red
+static uint8_t current_color[3] = { 0xff, 0x00, 0x00 };
 
 int main(void) {
 
-  printf("Board started. Initializing BLE: \n");
+  printf("Board started. Initializing BLE: \n\n");
 
   // Setup BLE
   // Note: simple BLE is our own library. You can find it in `nrf5x-base/lib/simple_ble/`
   simple_ble_app = simple_ble_init(&ble_config);
 
-  // Start Advertising
-  uint8_t ble_data[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x0A, 0x09, 0x43, 0x53, 0x33, 0x39, 0x37, 0x2F, 0x34, 0x39, 0x37,};
-
-  simple_ble_adv_raw(ble_data, 14);
-  printf("Started BLE advertisements\n");
+  // Start Advertising 
+  simple_ble_adv_manuf_data(current_color, 3);
+  printf("Started BLE advertisements\n\n");
 
   while(1) {
+    printf("RED: 0x%x, GREEN: 0x%x, BLUE: 0x%x\n\n", 
+           current_color[0], current_color[1], current_color[2]);
     power_manage();
   }
 }
