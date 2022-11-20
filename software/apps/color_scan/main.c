@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include "simple_ble.h"
+#include "pwm_driver.h"
 
 #include "nrf52840dk.h"
 
@@ -55,9 +56,12 @@ int main(void) {
   // Start scanning
   scanning_start();
 
+  pwm_init();
+  display_color();
+
   // go into low power mode
   while(1) {
-    power_manage();
+    //power_manage();
   }
 }
 
