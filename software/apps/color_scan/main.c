@@ -57,11 +57,15 @@ int main(void) {
   scanning_start();
 
   pwm_init();
-  display_color();
+
+  color_t green;
+  green.val = 0;
+  green.blue = 0xFF;
+  display_color(green);
 
   // go into low power mode
   while(1) {
-    //power_manage();
+    power_manage();
   }
 }
 

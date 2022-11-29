@@ -44,7 +44,7 @@ void pwm_init(void) {
   nrfx_pwm_init(&PWM_INST, &local_config, NULL);
 }
 
-void display_color(void) {
+void display_color(color_t color) {
   // Stop the PWM (and wait until its finished)
   // Second argument blocks function until finished if true
   nrfx_pwm_stop(&PWM_INST, true);
@@ -53,18 +53,20 @@ void display_color(void) {
   // You can access it as NRF_PWM0->COUNTERTOP
   // int countertop = 500000/frequency;
   // NRF_PWM0->COUNTERTOP = countertop;
-  
+  uint16_t color_array[24];
+  for (uint32_t i = 0; i < 24; i++) {
+    color_array[i] = ((1 << i) & color.val) ? HIGH : LOW;
+  }
 
-  // Modify the sequence data to be a 25% duty cycle
-  // sequence_data[0] = countertop/2;
-  for (int i = 0; i < LED_DUTY_CYCLE_ARRAY_LENGTH - 8; i++) {
-    sequence_data[i] = HIGH;
+  for (uint32_t i = 0; i < 30; i++) {
+    for (uint32_t j = 0; j < 24; j++) {
+      sequence_data[(i * 24) + j] = color_array[j];
+    }
   }
   
-  for (int i = 720; i < LED_DUTY_CYCLE_ARRAY_LENGTH; i++) {
+  for (uint32_t i = LED_DUTY_CYCLE_ARRAY_LENGTH - 8; i < LED_DUTY_CYCLE_ARRAY_LENGTH; i++) {
     sequence_data[i] = LOW;
-  } 
-
+  }
 
   // Start playback of the samples and loop indefinitely
   nrfx_pwm_simple_playback(&PWM_INST, &pwm_sequence, 1, NRFX_PWM_FLAG_LOOP);
