@@ -26,10 +26,6 @@ nrf_pwm_sequence_t pwm_sequence = {
 
 void pwm_init(void) {
   // Initialize the PWM
-  // SPEAKER_OUT is the output pin, mark the others as NRFX_PWM_PIN_NOT_USED
-  // Set the clock to 500 kHz, count mode to Up, and load mode to Common
-  // The Countertop value doesn't matter for now. We'll set it in play_tone()
-  // TODO
   nrfx_pwm_config_t local_config;
   local_config.output_pins[0] = LED_STRIP_PIN;
   for (int i = 1; i < 4; i++) {
@@ -49,10 +45,6 @@ void display_color(color_t color) {
   // Second argument blocks function until finished if true
   nrfx_pwm_stop(&PWM_INST, true);
 
-  // Set a countertop value based on desired tone frequency
-  // You can access it as NRF_PWM0->COUNTERTOP
-  // int countertop = 500000/frequency;
-  // NRF_PWM0->COUNTERTOP = countertop;
   uint16_t color_array[24];
   for (uint32_t i = 0; i < 24; i++) {
     color_array[i] = ((1 << i) & color.val) ? HIGH : LOW;
@@ -64,10 +56,9 @@ void display_color(color_t color) {
     }
   }
   
-  for (uint32_t i = LED_DUTY_CYCLE_ARRAY_LENGTH - 8; i < LED_DUTY_CYCLE_ARRAY_LENGTH; i++) {
-    sequence_data[i] = LOW;
+  for (uint32_t i = LED_DUTY_CYCLE_ARRAY_LENGTH - 24; i < LED_DUTY_CYCLE_ARRAY_LENGTH; i++) {
+    sequence_data[i] = 0;
   }
 
-  // Start playback of the samples and loop indefinitely
-  nrfx_pwm_simple_playback(&PWM_INST, &pwm_sequence, 1, NRFX_PWM_FLAG_LOOP);
+  nrfx_pwm_simple_playback(&PWM_INST, &pwm_sequence, 1, NRFX_PWM_FLAG_STOP);
 }

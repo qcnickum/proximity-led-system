@@ -27,8 +27,8 @@ static simple_ble_config_t ble_config = {
 // Main application state
 simple_ble_app_t* simple_ble_app;
 
-// defaults to red
-static uint8_t current_color[3] = { 0xff, 0x00, 0x00 };
+// defaults to green (GRB format)
+static uint8_t current_color[3] = { 0xFF, 0xFF, 0x00 };
 
 int main(void) {
 
