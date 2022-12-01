@@ -8,15 +8,16 @@
 
 #include "simple_ble.h"
 #include "pwm_driver.h"
-
+#include "app_timer.h"
 #include "nrf52840dk.h"
 
-struct device_state {
-  uint16_t id;
-  color_t color;   
-};
+color_t DARKNESS;
 
-device_state global_device_state[2];
+APP_TIMER_DEF(device_1_timer);
+APP_TIMER_DEF(device_2_timer);
+
+app_timer_id_t device_timers[2] = { device_1_timer, device_2_timer };
+color_t global_device_state[2];
 
 int has_known_id(uint16_t id) {
   return id == 0xAABB || id == 0xCCDD;
@@ -33,6 +34,40 @@ int get_device_index(uint16_t id) {
   
   // device doesnt exist
   return -1;
+}
+
+int is_same_color(color_t color_1, color_t color_2) {
+  return color_1.green == color_2.green && color_1.red == color_2.red && color_1.blue == color_2.blue;
+}
+
+color_t calculate_combined_color() {
+  color_t final_color;
+  final_color.val = 0x00;
+
+  uint8_t green = global_device_state[0].green + global_device_state[1].green;
+  green = green >= global_device_state[0].green ? green : 255;
+
+  uint8_t red = global_device_state[0].red + global_device_state[1].red;
+  red = red >= global_device_state[0].red ? red : 255;
+
+  uint8_t blue = global_device_state[0].blue + global_device_state[1].blue;
+  blue = blue >= global_device_state[0].blue ? blue : 255;
+  
+  final_color.green = green;
+  final_color.red = red;
+  final_color.blue = blue;
+
+  return final_color;
+}
+
+void reset_device_1() {
+  global_device_state[0] = DARKNESS;
+  display_color(calculate_combined_color());  
+}
+
+void reset_device_2() {
+  global_device_state[1] = DARKNESS;
+  display_color(calculate_combined_color());
 }
 
 // BLE configuration
@@ -74,28 +109,30 @@ void ble_evt_adv_report(ble_evt_t const* p_ble_evt) {
   //  printf("0x%x  ", adv_buf[i]);
   //}
   //printf("RSSI IS: %d\n\n", adv_rssi);
+  app_timer_stop(device_timers[get_device_index(adv_id)]);
   color_t adv_color;
   adv_color.val = 0x00;
   adv_color.green = adv_buf[7];
   adv_color.red = adv_buf[8];
   adv_color.blue = adv_buf[9];
   
-
-  display_color(adv_color);
+  color_t curr_device_color = global_device_state[get_device_index(adv_id)];
+  if (is_same_color(curr_device_color, adv_color)) {
+    app_timer_start(device_timers[get_device_index(adv_id)], APP_TIMER_TICKS(1500), NULL);
+    return;
+  }
+  
+  global_device_state[get_device_index(adv_id)] = adv_color;
+  display_color(calculate_combined_color());
+  app_timer_start(device_timers[get_device_index(adv_id)], APP_TIMER_TICKS(1500), NULL);
 }
 
 
 int main(void) {
-  device_state device_1;
-  device_1.id = 0xAABB;
-  device_1.color = (uint32_t) 0x00;
+  DARKNESS.val = 0x00;
 
-  device_state device_2;
-  device_2.id = 0xCCDD;
-  device_2.color = (uint32_t) 0x00;
-
-  global_device_state[0] = device_1;
-  gloval_device_state[1] = device_2;
+  global_device_state[0] = DARKNESS;
+  global_device_state[1] = DARKNESS;
 
   // Setup BLE
   // Note: simple BLE is our own library. You can find it in `nrf5x-base/lib/simple_ble/`
@@ -106,6 +143,14 @@ int main(void) {
   scanning_start();
 
   pwm_init();
+  display_color(DARKNESS);
+  
+  // init/create timers, and start them
+  app_timer_init();
+  app_timer_create(&device_1_timer, APP_TIMER_MODE_REPEATED, reset_device_1);
+  app_timer_create(&device_2_timer, APP_TIMER_MODE_REPEATED, reset_device_2);
+  app_timer_start(device_1_timer, APP_TIMER_TICKS(1500), NULL);
+  app_timer_start(device_2_timer, APP_TIMER_TICKS(1500), NULL);
 
   // go into low power mode
   while(1) {
