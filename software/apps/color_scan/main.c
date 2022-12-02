@@ -99,16 +99,10 @@ void ble_evt_adv_report(ble_evt_t const* p_ble_evt) {
     return; 
   }
 
-  if (adv_rssi < -45) {
+  if (adv_rssi < -80) {
     return;
   }
 
-  //printf("Found our device with address 0x%X%X\n", ble_addr[1], ble_addr[0]);
-  //printf("It has data: ");
-  //for (uint16_t i=0; i < adv_len; i++) {
-  //  printf("0x%x  ", adv_buf[i]);
-  //}
-  //printf("RSSI IS: %d\n\n", adv_rssi);
   app_timer_stop(device_timers[get_device_index(adv_id)]);
   color_t adv_color;
   adv_color.val = 0x00;

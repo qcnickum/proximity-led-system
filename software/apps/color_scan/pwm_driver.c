@@ -46,8 +46,17 @@ void display_color(color_t color) {
   nrfx_pwm_stop(&PWM_INST, true);
 
   uint16_t color_array[24];
-  for (uint32_t i = 0; i < 24; i++) {
-    color_array[i] = ((1 << i) & color.val) ? HIGH : LOW;
+  
+  for (uint32_t i = 0; i < 8; i++) {
+    color_array[7 - i] = (1 << i) & color.green ? HIGH : LOW;
+  }
+
+  for (uint32_t i = 0; i < 8; i++) {
+    color_array[15 - i] = (1 << i) & color.red ? HIGH : LOW;
+  }
+
+  for (uint32_t i = 0; i < 8; i++) {
+    color_array[23 - i] = (1 << i) & color.blue ? HIGH : LOW;
   }
 
   for (uint32_t i = 0; i < 30; i++) {
@@ -62,3 +71,4 @@ void display_color(color_t color) {
 
   nrfx_pwm_simple_playback(&PWM_INST, &pwm_sequence, 1, NRFX_PWM_FLAG_STOP);
 }
+

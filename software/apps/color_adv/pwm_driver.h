@@ -10,7 +10,7 @@
 
 #define LED_STRIP_PIN NRF_GPIO_PIN_MAP(1, 8)
 // Need enough for 30 LED * 3 colors per LED * 8 bits per byte + 1 byte of 0's to mark end
-#define LED_DUTY_CYCLE_ARRAY_LENGTH 744
+#define LED_DUTY_CYCLE_ARRAY_LENGTH 408
 
 // LED expects colors in GRB format (G7, ..., G0, R7, ..., B7,..., B0)
 // G7 most significat bit
@@ -30,3 +30,4 @@ void pwm_init(void);
 
 void display_color(color_t color);
 
+void display_color_options(color_t* color_options);
