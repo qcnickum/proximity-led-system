@@ -14,9 +14,11 @@
 
 // LED expects colors in GRB format (G7, ..., G0, R7, ..., B7,..., B0)
 // G7 most significat bit
-typedef union color {
+typedef union color
+{
   uint32_t val;
-  struct {
+  struct
+  {
     uint8_t green;
     uint8_t red;
     uint8_t blue;
@@ -24,8 +26,14 @@ typedef union color {
   };
 } color_t;
 
-enum duty_cycle {HIGH = (1 << 15) | 7, LOW = (1 << 15) | 3};
+enum duty_cycle
+{
+  HIGH = (1 << 15) | 7,
+  LOW = (1 << 15) | 3
+};
 
 void pwm_init(void);
 
 void display_color(color_t color);
+
+color_t set_brightness(color_t input_color, float brightness);
