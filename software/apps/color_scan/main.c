@@ -18,6 +18,10 @@ APP_TIMER_DEF(device_1_timer);
 APP_TIMER_DEF(device_2_timer);
 uint32_t ttl_ms = 1500;
 
+APP_TIMER_DEF(device_1_undim_timer);
+APP_TIMER_DEF(device_2_undim_timer);
+app_timer_id_t device_undim_timers[2] = {device_1_undim_timer, device_2_undim_timer};
+
 uint32_t animation_duration_ms = 3000; // how long we want it to take (in ms) to dim on or off
 uint32_t animation_step_size = 10;     // how much (in percent) the brightness changes in each frame of animation.
 uint32_t ms_per_frame;
@@ -29,6 +33,7 @@ typedef struct animation_state
 {
   uint8_t device_id;
   float brightness;
+  uint8_t is_undimming;
 } animation_state_t;
 
 animation_state_t device_1_animation_state = {.device_id = 0, .brightness = 0.0};
@@ -88,6 +93,10 @@ void dim_device(void *animation_state_ptr)
 {
   animation_state_t *state = (animation_state_t *)animation_state_ptr;
   uint8_t device_id = state->device_id;
+
+  app_timer_stop(device_undim_timers[device_id]);
+  state->is_undimming = 0;
+
   float brightness = state->brightness;                    // read
   brightness = max(0.0, brightness - animation_step_size); // update: reduce brightness
   state->brightness = brightness;                          // write back
@@ -97,17 +106,26 @@ void dim_device(void *animation_state_ptr)
 
   if (brightness > 0)
   {
-    app_timer_start(device_timers[device_id], APP_TIMER_TICKS(ms_per_frame), animation_state_ptr);
+    app_timer_start(device_undim_timers[device_id], APP_TIMER_TICKS(ms_per_frame), animation_state_ptr);
   }
 }
 
-void undim_device(animation_state_t *state)
+void undim_device(void *animation_state_ptr)
 {
+  animation_state_t *state = (animation_state_t *)animation_state_ptr;
+  uint8_t device_id = state->device_id;
   float brightness = state->brightness;                      // read
   brightness = min(100.0, brightness + animation_step_size); // update: increase brightness
   state->brightness = brightness;                            // write back
-  global_device_state[device_id] = set_brightness(global_device_state[device_id], brightness);
-  // display_color(calculate_combined_color());
+
+  if (brightness < 100.0)
+  {
+    app_timer_start(device_timers[device_id], APP_TIMER_TICKS(ms_per_frame), animation_state_ptr);
+  }
+  else
+  {
+    state->is_undimming = 0;
+  }
 }
 
 // BLE configuration
@@ -159,9 +177,11 @@ void ble_evt_adv_report(ble_evt_t const *p_ble_evt)
   }
 
   animation_state_t *animation_state = get_device_index(adv_id) == 0 ? &device_1_animation_state : &device_2_animation_state;
-  if (animation_state->brightness < 100.0)
+  if (!animation_state->is_undimming && animation_state->brightness < 100.0)
   {
-    undim_device(animation_state);
+    // start the undimming process if the light has not yet fully undimmed upon entry
+    animation_state->is_undimming = 1;
+    app_timer_start(device_undim_timers[get_device_index(adv_id)], APP_TIMER_TICKS(ms_per_frame), &device_1_animation_state);
   }
 
   display_color(calculate_combined_color());
@@ -174,8 +194,14 @@ int main(void)
 
   float number_of_frames = ceil(100 / animation_step_size); // we need to *always* round number of frames *up* rather than down when converting to int
   ms_per_frame = (100 / number_of_frames) / animation_duration_ms;
-  device_1_animation_state = {.device_id = 0, .brightness = 0.0};
-  device_2_animation_state = {.device_id = 1, .brightness = 0.0};
+
+  device_1_animation_state.device_id = 0;
+  device_1_animation_state.brightness = 0;
+  device_1_animation_state.is_undimming = 0; // false
+
+  device_2_animation_state.device_id = 0;
+  device_2_animation_state.brightness = 0;
+  device_2_animation_state.is_undimming = 0;
 
   global_device_state[0] = DARKNESS;
   global_device_state[1] = DARKNESS;
@@ -197,6 +223,9 @@ int main(void)
   app_timer_create(&device_2_timer, APP_TIMER_MODE_SINGLE_SHOT, dim_device);
   app_timer_start(device_1_timer, APP_TIMER_TICKS(ttl_ms), &device_1_animation_state);
   app_timer_start(device_2_timer, APP_TIMER_TICKS(ttl_ms), &device_2_animation_state);
+
+  app_timer_create(&device_1_undim_timer, APP_TIMER_MODE_SINGLE_SHOT, undim_device);
+  app_timer_create(&device_2_undim_timer, APP_TIMER_MODE_SINGLE_SHOT, undim_device);
 
   // go into low power mode
   while (1)
