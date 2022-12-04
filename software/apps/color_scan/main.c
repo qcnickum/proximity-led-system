@@ -185,7 +185,7 @@ void ble_evt_adv_report(ble_evt_t const *p_ble_evt)
   }
 
   display_color(calculate_combined_color());
-  app_timer_start(device_timers[get_device_index(adv_id)], APP_TIMER_TICKS(1500), NULL);
+  app_timer_start(device_timers[get_device_index(adv_id)], APP_TIMER_TICKS(ttl_ms), NULL);
 }
 
 int main(void)
@@ -221,8 +221,6 @@ int main(void)
   app_timer_init();
   app_timer_create(&device_1_timer, APP_TIMER_MODE_SINGLE_SHOT, dim_device);
   app_timer_create(&device_2_timer, APP_TIMER_MODE_SINGLE_SHOT, dim_device);
-  app_timer_start(device_1_timer, APP_TIMER_TICKS(ttl_ms), &device_1_animation_state);
-  app_timer_start(device_2_timer, APP_TIMER_TICKS(ttl_ms), &device_2_animation_state);
 
   app_timer_create(&device_1_undim_timer, APP_TIMER_MODE_SINGLE_SHOT, undim_device);
   app_timer_create(&device_2_undim_timer, APP_TIMER_MODE_SINGLE_SHOT, undim_device);
