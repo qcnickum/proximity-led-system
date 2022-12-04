@@ -36,4 +36,4 @@ void pwm_init(void);
 
 void display_color(color_t color);
 
-color_t set_brightness(color_t input_color, float brightness);
+color_t make_color_of_brightness(color_t input_color, float brightness);

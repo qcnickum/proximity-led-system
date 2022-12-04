@@ -79,17 +79,3 @@ void display_color(color_t color)
 
   nrfx_pwm_simple_playback(&PWM_INST, &pwm_sequence, 1, NRFX_PWM_FLAG_STOP);
 }
-
-// takes some brightness value up to 100.0
-color_t set_brightness(color_t input_color, float brightness)
-{
-  float ratio = brightness / 100.0;
-  color_t result_color;
-  result_color.val = 0;
-
-  result_color.green = input_color.green * ratio;
-  result_color.red = input_color.red * ratio;
-  result_color.blue = input_color.blue * ratio;
-
-  return result_color;
-}
