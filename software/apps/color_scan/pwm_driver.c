@@ -93,15 +93,3 @@ color_t set_brightness(color_t input_color, float brightness)
 
   return result_color;
 }
-
-color_t change_brightness(color_t input_color, float amount)
-{
-  color_t result_color;
-  result_color.val = 0;
-
-  result_color.green = input_color.green * amount;
-  result_color.red = input_color.red * amount;
-  result_color.blue = input_color.blue * amount;
-
-  return result_color;
-}
