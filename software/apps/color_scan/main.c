@@ -30,7 +30,7 @@ color_t DARKNESS;
 APP_TIMER_DEF(device_1_ttl_timer);
 APP_TIMER_DEF(device_2_ttl_timer);
 app_timer_id_t device_ttl_timers[2] = {device_1_ttl_timer, device_2_ttl_timer};
-const uint32_t TTL_MS = 800;
+const uint32_t TTL_MS = 1500;
 
 APP_TIMER_DEF(device_1_undim_timer);
 APP_TIMER_DEF(device_2_undim_timer);
@@ -82,7 +82,7 @@ void dim_device(void *animation_state_ptr)
   state->is_undimming = 0;
 
   float brightness = state->brightness;                     // read
-  brightness = fmax(0.0, brightness - ANIMATION_STEP_SIZE); // update: reduce brightness
+  brightness = fmax(0.0, brightness - (ANIMATION_STEP_SIZE + 5)); // update: reduce brightness
   state->brightness = brightness;                           // write back
 
   animation_colors[device_id] = make_color_of_brightness(actual_device_color[device_id], brightness);
@@ -127,7 +127,7 @@ void ble_evt_adv_report(ble_evt_t const *p_ble_evt)
     return;
   }
 
-  if (adv_rssi < -50)
+  if (adv_rssi < -48)
   {
     return;
   }

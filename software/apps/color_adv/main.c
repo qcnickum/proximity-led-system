@@ -18,7 +18,7 @@
 static simple_ble_config_t ble_config = {
     // c0:98:e5:4e:xx:xx
     .platform_id = 0x4E,     // used as 4th octect in device BLE address
-    .device_id = 0xAABB,     // must be unique on each device you program!
+    .device_id = 0xCCDD,     // must be unique on each device you program!
     .adv_name = "CS397/497", // used in advertisements if there is room
     .adv_interval = MSEC_TO_UNITS(1000, UNIT_0_625_MS),
     .min_conn_interval = MSEC_TO_UNITS(500, UNIT_1_25_MS),
@@ -36,14 +36,14 @@ color_t displayed_colors[8];
 int8_t color_index = 0;
 uint8_t is_in_select_mode = 0; // 0 means not in select mode
 
-int8_t increment_color_index(int8_t color_index)
+int8_t increment_color_index(int8_t index)
 {
-  return color_index + 1 > 7 ? 0 : color_index + 1;
+  return index + 1 > 7 ? 0 : index + 1;
 }
 
-int8_t decrement_color_index(int8_t color_index)
+int8_t decrement_color_index(int8_t index)
 {
-  return color_index - 1 < 0 ? 7 : color_index - 1;
+  return index - 1 < 0 ? 7 : index - 1;
 }
 
 void update_color()

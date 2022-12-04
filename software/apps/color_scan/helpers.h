@@ -1,5 +1,3 @@
-#include "pwm_driver.h"
-
 // takes some brightness value up to 100.0
 color_t make_color_of_brightness(color_t input_color, float brightness);
 
