@@ -16,13 +16,13 @@ color_t DARKNESS;
 
 APP_TIMER_DEF(device_1_timer);
 APP_TIMER_DEF(device_2_timer);
-uint32_t ttl_ms = 1500;
+uint32_t ttl_ms = 800;
 
 APP_TIMER_DEF(device_1_undim_timer);
 APP_TIMER_DEF(device_2_undim_timer);
 app_timer_id_t device_undim_timers[2] = {device_1_undim_timer, device_2_undim_timer};
 
-uint32_t animation_duration_ms = 3000; // how long we want it to take (in ms) to dim on or off
+uint32_t animation_duration_ms = 500; // how long we want it to take (in ms) to dim on or off
 uint32_t animation_step_size = 10;     // how much (in percent) the brightness changes in each frame of animation.
 uint32_t ms_per_frame;
 // consider that a step size of 10 will result in there being 10 frames of animation. Then, duration and step size will together control framerate (initialized in main).
@@ -41,6 +41,7 @@ animation_state_t device_2_animation_state = {.device_id = 1, .brightness = 0.0}
 
 app_timer_id_t device_timers[2] = {device_1_timer, device_2_timer};
 color_t global_device_state[2];
+color_t actual_device_color[2];
 
 int has_known_id(uint16_t id)
 {
@@ -93,20 +94,19 @@ void dim_device(void *animation_state_ptr)
 {
   animation_state_t *state = (animation_state_t *)animation_state_ptr;
   uint8_t device_id = state->device_id;
-
   app_timer_stop(device_undim_timers[device_id]);
   state->is_undimming = 0;
 
   float brightness = state->brightness;                    // read
-  brightness = max(0.0, brightness - animation_step_size); // update: reduce brightness
+  brightness = fmax(0.0, brightness - animation_step_size); // update: reduce brightness
   state->brightness = brightness;                          // write back
-
-  global_device_state[device_id] = set_brightness(global_device_state[device_id], brightness);
+  
+  global_device_state[device_id] = set_brightness(actual_device_color[device_id], brightness);
   display_color(calculate_combined_color());
 
-  if (brightness > 0)
+  if (brightness == 0.0)
   {
-    app_timer_start(device_undim_timers[device_id], APP_TIMER_TICKS(ms_per_frame), animation_state_ptr);
+    app_timer_stop(device_timers[device_id]);
   }
 }
 
@@ -115,15 +115,14 @@ void undim_device(void *animation_state_ptr)
   animation_state_t *state = (animation_state_t *)animation_state_ptr;
   uint8_t device_id = state->device_id;
   float brightness = state->brightness;                      // read
-  brightness = min(100.0, brightness + animation_step_size); // update: increase brightness
+  brightness = fmin(100.0, brightness + animation_step_size); // update: increase brightness
   state->brightness = brightness;                            // write back
 
-  if (brightness < 100.0)
+  global_device_state[device_id] = set_brightness(actual_device_color[device_id], brightness);
+
+  if (brightness == 100.0)
   {
-    app_timer_start(device_timers[device_id], APP_TIMER_TICKS(ms_per_frame), animation_state_ptr);
-  }
-  else
-  {
+    app_timer_stop(device_undim_timers[device_id]);
     state->is_undimming = 0;
   }
 }
@@ -158,7 +157,7 @@ void ble_evt_adv_report(ble_evt_t const *p_ble_evt)
     return;
   }
 
-  if (adv_rssi < -80)
+  if (adv_rssi < -50)
   {
     return;
   }
@@ -170,22 +169,26 @@ void ble_evt_adv_report(ble_evt_t const *p_ble_evt)
   adv_color.red = adv_buf[8];
   adv_color.blue = adv_buf[9];
 
-  color_t curr_device_color = global_device_state[get_device_index(adv_id)];
+  color_t curr_device_color = actual_device_color[get_device_index(adv_id)];
+  uint8_t device_id = get_device_index(adv_id);
+  animation_state_t *animation_state = device_id == 0 ? &device_1_animation_state : &device_2_animation_state;
+  
   if (!is_same_color(curr_device_color, adv_color))
   {
-    global_device_state[get_device_index(adv_id)] = adv_color;
+    actual_device_color[device_id] = adv_color;
+    global_device_state[device_id] = set_brightness(actual_device_color[device_id], animation_state->brightness);
   }
 
-  animation_state_t *animation_state = get_device_index(adv_id) == 0 ? &device_1_animation_state : &device_2_animation_state;
   if (!animation_state->is_undimming && animation_state->brightness < 100.0)
   {
     // start the undimming process if the light has not yet fully undimmed upon entry
     animation_state->is_undimming = 1;
-    app_timer_start(device_undim_timers[get_device_index(adv_id)], APP_TIMER_TICKS(ms_per_frame), &device_1_animation_state);
+    undim_device((void*) animation_state);
+    app_timer_start(device_undim_timers[device_id], APP_TIMER_TICKS(100), animation_state);
   }
 
   display_color(calculate_combined_color());
-  app_timer_start(device_timers[get_device_index(adv_id)], APP_TIMER_TICKS(ttl_ms), NULL);
+  app_timer_start(device_timers[device_id], APP_TIMER_TICKS(ttl_ms), animation_state);
 }
 
 int main(void)
@@ -196,11 +199,11 @@ int main(void)
   ms_per_frame = (100 / number_of_frames) / animation_duration_ms;
 
   device_1_animation_state.device_id = 0;
-  device_1_animation_state.brightness = 0;
+  device_1_animation_state.brightness = 0.0;
   device_1_animation_state.is_undimming = 0; // false
 
-  device_2_animation_state.device_id = 0;
-  device_2_animation_state.brightness = 0;
+  device_2_animation_state.device_id = 1;
+  device_2_animation_state.brightness = 0.0;
   device_2_animation_state.is_undimming = 0;
 
   global_device_state[0] = DARKNESS;
@@ -219,11 +222,11 @@ int main(void)
 
   // init/create timers, and start them
   app_timer_init();
-  app_timer_create(&device_1_timer, APP_TIMER_MODE_SINGLE_SHOT, dim_device);
-  app_timer_create(&device_2_timer, APP_TIMER_MODE_SINGLE_SHOT, dim_device);
+  app_timer_create(&device_1_timer, APP_TIMER_MODE_REPEATED, dim_device);
+  app_timer_create(&device_2_timer, APP_TIMER_MODE_REPEATED, dim_device);
 
-  app_timer_create(&device_1_undim_timer, APP_TIMER_MODE_SINGLE_SHOT, undim_device);
-  app_timer_create(&device_2_undim_timer, APP_TIMER_MODE_SINGLE_SHOT, undim_device);
+  app_timer_create(&device_1_undim_timer, APP_TIMER_MODE_REPEATED, undim_device);
+  app_timer_create(&device_2_undim_timer, APP_TIMER_MODE_REPEATED, undim_device);
 
   // go into low power mode
   while (1)
