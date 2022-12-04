@@ -15,6 +15,9 @@ static const nrfx_pwm_t PWM_INST = NRFX_PWM_INSTANCE(0);
 // Holds duty cycle values to trigger PWM toggle
 nrf_pwm_values_common_t sequence_data[LED_DUTY_CYCLE_ARRAY_LENGTH];
 
+// Used to eventually send color
+uint16_t color_array[24];
+
 // Sequence structure for configuring DMA
 nrf_pwm_sequence_t pwm_sequence = {
     .values.p_common = sequence_data,
@@ -41,14 +44,8 @@ void pwm_init(void)
   nrfx_pwm_init(&PWM_INST, &local_config, NULL);
 }
 
-void display_color(color_t color)
+void calculate_color_array(color_t color)
 {
-  // Stop the PWM (and wait until its finished)
-  // Second argument blocks function until finished if true
-  nrfx_pwm_stop(&PWM_INST, true);
-
-  uint16_t color_array[24];
-
   for (uint32_t i = 0; i < 8; i++)
   {
     color_array[7 - i] = (1 << i) & color.green ? HIGH : LOW;
@@ -63,13 +60,27 @@ void display_color(color_t color)
   {
     color_array[23 - i] = (1 << i) & color.blue ? HIGH : LOW;
   }
+}
+
+void set_led_to_color(uint32_t led_num, color_t color)
+{
+  calculate_color_array(color);
+
+  for (uint32_t i = 0; i < 24; i++)
+  {
+    sequence_data[(led_num * 24) + i] = color_array[i];
+  }
+}
+
+void display_color(color_t color)
+{
+  // Stop the PWM (and wait until its finished)
+  // Second argument blocks function until finished if true
+  nrfx_pwm_stop(&PWM_INST, true);
 
   for (uint32_t i = 0; i < 30; i++)
   {
-    for (uint32_t j = 0; j < 24; j++)
-    {
-      sequence_data[(i * 24) + j] = color_array[j];
-    }
+    set_led_to_color(i, color);
   }
 
   for (uint32_t i = LED_DUTY_CYCLE_ARRAY_LENGTH - 24; i < LED_DUTY_CYCLE_ARRAY_LENGTH; i++)

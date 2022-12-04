@@ -35,5 +35,3 @@ enum duty_cycle
 void pwm_init(void);
 
 void display_color(color_t color);
-
-color_t make_color_of_brightness(color_t input_color, float brightness);
